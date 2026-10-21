@@ -19,6 +19,7 @@
 #define REPEAT_MS 120UL
 #define STEP_MS 120UL
 #define FRAME_MS 20UL
+#define CRASH_BLINK_MS 400UL
 #define BRIGHTNESS 3
 #define CAR_WIDTH 3
 #define CAR_HEIGHT 5
@@ -40,6 +41,11 @@ static const uint8_t car[CAR_HEIGHT] PROGMEM = {
     0x02,
     0x07,
     0x05
+};
+
+// A 5x5 cross, shown after a collision.
+static const uint8_t crash_icon[5] PROGMEM = {
+    0x11, 0x0A, 0x04, 0x0A, 0x11
 };
 
 // C, A, R with horizontally mirrored glyphs for the physical display.
@@ -74,6 +80,7 @@ static uint16_t random_state = 0xACE1U;
 static uint32_t last_step;
 static uint32_t last_move;
 static uint32_t paused_since;
+static uint32_t crashed_since;
 
 /* ---------- MAX7219 ---------- */
 
@@ -179,14 +186,27 @@ static void draw_car(uint8_t x, int8_t y) {
     }
 }
 
-static void render(void) {
+static void render(uint32_t now) {
     if (!started) {
         memcpy_P(framebuffer, logo, sizeof(framebuffer));
     } else {
         memset(framebuffer, 0, sizeof(framebuffer));
-        draw_car(player_x, PLAYER_Y);
-        for (uint8_t i = 0; i < OBSTACLE_COUNT; i++) {
-            draw_car(obstacle_x[i], obstacle_y[i]);
+        if (crashed) {
+            // Blink a centered cross until the player presses a button.
+            if (((uint32_t)(now - crashed_since) / CRASH_BLINK_MS) % 2 == 0) {
+                for (uint8_t row = 0; row < 5; row++) {
+                    for (uint8_t col = 0; col < 5; col++) {
+                        if (pgm_read_byte(&crash_icon[row]) & (1U << col)) {
+                            set_pixel(1 + col, 13 + row);
+                        }
+                    }
+                }
+            }
+        } else {
+            draw_car(player_x, PLAYER_Y);
+            for (uint8_t i = 0; i < OBSTACLE_COUNT; i++) {
+                draw_car(obstacle_x[i], obstacle_y[i]);
+            }
         }
     }
     display_flush();
@@ -254,6 +274,7 @@ static void update_game(uint32_t now) {
         }
     }
     crashed = collision();
+    if (crashed) crashed_since = now;
 }
 
 /* ---------- Input ---------- */
@@ -292,7 +313,7 @@ static void handle_input(uint8_t events, uint32_t now) {
         return; // Consume the start press, including the pause button.
     }
     if (crashed) {
-        if (events & (LEFT | RIGHT)) reset_game(now);
+        if (events) reset_game(now);
         return;
     }
     if (events & PAUSE) {
@@ -316,6 +337,7 @@ static void handle_input(uint8_t events, uint32_t now) {
     if (direction == RIGHT && player_x < 8 - CAR_WIDTH) player_x++;
     last_move = now;
     crashed = collision();
+    if (crashed) crashed_since = now;
 }
 
 /* ---------- Main ---------- */
@@ -348,7 +370,7 @@ int main(void) {
 
         if ((uint32_t)(now - last_frame) >= FRAME_MS) {
             last_frame = now;
-            render();
+            render(now);
         }
     }
 }
