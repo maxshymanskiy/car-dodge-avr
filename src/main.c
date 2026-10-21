@@ -17,11 +17,13 @@
 #define POLL_MS 5UL
 #define DEBOUNCE_MS 25UL
 #define REPEAT_MS 120UL
-#define STEP_MS 140UL
+#define STEP_MS 120UL
 #define FRAME_MS 20UL
-#define BRIGHTNESS 5
+#define BRIGHTNESS 3
 #define CAR_WIDTH 3
 #define CAR_HEIGHT 5
+#define OBSTACLE_COUNT 3
+#define OBSTACLE_GAP 16   // Vertical distance between obstacle cars.
 #define PLAYER_Y 27         // Five rows: y=27..31, at the very bottom
 #define FLIP_SCREEN 0       // Keep sprite orientation unchanged
 
@@ -40,11 +42,11 @@ static const uint8_t car[CAR_HEIGHT] PROGMEM = {
     0x05
 };
 
-// Startup logo: C, A, R stacked vertically, with a car below
+// C, A, R with horizontally mirrored glyphs for the physical display.
 static const uint8_t logo[32] PROGMEM = {
     // C
     0x00, 0x00,
-    0x3C, 0x04, 0x04, 0x04, 0x3C,
+    0x3C, 0x20, 0x20, 0x20, 0x3C,
 
     // A
     0x00, 0x00,
@@ -52,7 +54,7 @@ static const uint8_t logo[32] PROGMEM = {
 
     // R
     0x00, 0x00,
-    0x1C, 0x24, 0x1C, 0x14, 0x24,
+    0x38, 0x24, 0x38, 0x28, 0x24,
 
     // Empty row and car
     0x00, 0x00, 0x00, 0x00, 0x00,
@@ -63,8 +65,8 @@ static const uint8_t logo[32] PROGMEM = {
 static uint8_t framebuffer[32];
 static uint8_t started;
 static uint8_t player_x = 2;
-static uint8_t obstacle_x;
-static int8_t obstacle_y;
+static uint8_t obstacle_x[OBSTACLE_COUNT];
+static int8_t obstacle_y[OBSTACLE_COUNT];
 static uint8_t paused;
 static uint8_t crashed;
 static uint8_t stable_buttons;
@@ -183,30 +185,34 @@ static void render(void) {
     } else {
         memset(framebuffer, 0, sizeof(framebuffer));
         draw_car(player_x, PLAYER_Y);
-        draw_car(obstacle_x, obstacle_y);
+        for (uint8_t i = 0; i < OBSTACLE_COUNT; i++) {
+            draw_car(obstacle_x[i], obstacle_y[i]);
+        }
     }
     display_flush();
 }
 
 /* ---------- Game logic ---------- */
 
-// Spawns one car above the screen at a pseudorandom horizontal position.
-static void spawn_obstacle(void) {
+// Place a car at the given height with a new horizontal position.
+static void spawn_obstacle(uint8_t index, int8_t y) {
     random_state ^= random_state << 7;
     random_state ^= random_state >> 9;
     random_state ^= random_state << 8;
-    obstacle_x = random_state % (8 - CAR_WIDTH + 1);
-    obstacle_y = -CAR_HEIGHT;
+    obstacle_x[index] = random_state % (8 - CAR_WIDTH + 1);
+    obstacle_y[index] = y;
 }
 
 static uint8_t collision(void) {
-    for (uint8_t row = 0; row < CAR_HEIGHT; row++) {
-        int8_t enemy_row = PLAYER_Y + row - obstacle_y;
-        if (enemy_row < 0 || enemy_row >= CAR_HEIGHT) continue;
+    for (uint8_t i = 0; i < OBSTACLE_COUNT; i++) {
+        for (uint8_t row = 0; row < CAR_HEIGHT; row++) {
+            int8_t enemy_row = PLAYER_Y + row - obstacle_y[i];
+            if (enemy_row < 0 || enemy_row >= CAR_HEIGHT) continue;
 
-        uint8_t player_bits = car_row(row) << player_x;
-        uint8_t enemy_bits = car_row(enemy_row) << obstacle_x;
-        if (player_bits & enemy_bits) return 1;
+            uint8_t player_bits = car_row(row) << player_x;
+            uint8_t enemy_bits = car_row(enemy_row) << obstacle_x[i];
+            if (player_bits & enemy_bits) return 1;
+        }
     }
     return 0;
 }
@@ -218,7 +224,9 @@ static void reset_game(uint32_t now) {
     crashed = 0;
     last_step = now;
     last_move = now;
-    spawn_obstacle();
+    for (uint8_t i = 0; i < OBSTACLE_COUNT; i++) {
+        spawn_obstacle(i, -CAR_HEIGHT - i * OBSTACLE_GAP);
+    }
 }
 
 static void toggle_pause(uint32_t now) {
@@ -238,9 +246,12 @@ static void update_game(uint32_t now) {
     if (!started || paused || crashed || (uint32_t)(now - last_step) < STEP_MS) return;
 
     last_step = now;
-    obstacle_y++;
-    if (obstacle_y >= 32) {
-        spawn_obstacle();
+    for (uint8_t i = 0; i < OBSTACLE_COUNT; i++) {
+        obstacle_y[i]++;
+        if (obstacle_y[i] >= 32) {
+            // Preserve spacing when recycling a car to the top.
+            spawn_obstacle(i, obstacle_y[i] - OBSTACLE_COUNT * OBSTACLE_GAP);
+        }
     }
     crashed = collision();
 }
