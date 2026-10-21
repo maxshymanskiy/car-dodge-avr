@@ -19,6 +19,7 @@
 #define REPEAT_MS 120UL
 #define STEP_MS 120UL
 #define FRAME_MS 20UL
+#define MENU_BLINK_MS 400UL
 #define CRASH_BLINK_MS 400UL
 #define BRIGHTNESS 3
 #define CAR_WIDTH 3
@@ -48,24 +49,24 @@ static const uint8_t crash_icon[5] PROGMEM = {
     0x11, 0x0A, 0x04, 0x0A, 0x11
 };
 
+// Mirrored hollow 4x5 play symbol, centered in the fourth module.
+static const uint8_t play_icon[5] PROGMEM = {
+    0x30, 0x28, 0x24, 0x28, 0x30
+};
+
 // C, A, R with horizontally mirrored glyphs for the physical display.
 static const uint8_t logo[32] PROGMEM = {
-    // C
-    0x00, 0x00,
-    0x3C, 0x20, 0x20, 0x20, 0x3C,
+    // First 8x8 module: C.
+    0x00, 0x3C, 0x20, 0x20, 0x20, 0x3C, 0x00, 0x00,
 
-    // A
-    0x00, 0x00,
-    0x18, 0x24, 0x3C, 0x24, 0x24,
+    // Second 8x8 module: A.
+    0x00, 0x18, 0x24, 0x3C, 0x24, 0x24, 0x00, 0x00,
 
-    // R
-    0x00, 0x00,
-    0x38, 0x24, 0x38, 0x28, 0x24,
+    // Third 8x8 module: R.
+    0x00, 0x38, 0x24, 0x38, 0x28, 0x24, 0x00, 0x00,
 
-    // Empty row and car
-    0x00, 0x00, 0x00, 0x00, 0x00,
-    0x08, 0x1C, 0x08, 0x1C, 0x14,
-    0x00
+    // Fourth 8x8 module: space for the blinking play symbol.
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 static uint8_t framebuffer[32];
@@ -189,6 +190,11 @@ static void draw_car(uint8_t x, int8_t y) {
 static void render(uint32_t now) {
     if (!started) {
         memcpy_P(framebuffer, logo, sizeof(framebuffer));
+        if ((now / MENU_BLINK_MS) % 2 == 0) {
+            for (uint8_t row = 0; row < sizeof(play_icon); row++) {
+                framebuffer[25 + row] = pgm_read_byte(&play_icon[row]);
+            }
+        }
     } else {
         memset(framebuffer, 0, sizeof(framebuffer));
         if (crashed) {
