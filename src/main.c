@@ -7,7 +7,7 @@
 #include "spi.h"
 #include "millis.h"
 
-#define LATCH_PIN PB2 // D10 -> MAX7219 CS/LOAD
+#define LATCH_PIN PB2       // D10 -> MAX7219 CS/LOAD
 #define RIGHT_PIN PD2
 #define LEFT_PIN PD3
 #define PAUSE_PIN PD4
@@ -19,22 +19,49 @@
 #define REPEAT_MS 120UL
 #define STEP_MS 140UL
 #define FRAME_MS 20UL
-#define BRIGHTNESS 1
+#define BRIGHTNESS 5
 #define CAR_WIDTH 3
 #define CAR_HEIGHT 5
-#define PLAYER_Y 27             // Five rows: y=27..31, at the very bottom.
-#define FLIP_SCREEN 0           // Keep sprite orientation unchanged.
+#define PLAYER_Y 27         // Five rows: y=27..31, at the very bottom
+#define FLIP_SCREEN 0       // Keep sprite orientation unchanged
 
-// Top-to-bottom logical blocks -> chain indices (0 = nearest MCU).
-static const uint8_t module_order[4] PROGMEM = {3, 2, 1, 0};
-// Clockwise quarter turns for each 8x8 block: 0, 1, 2, 3.
+// Top-to-bottom logical blocks -> chain indices (0 = nearest MCU)
+static const uint8_t module_order[4] PROGMEM = {3, 2, 1, 0}; 
+// Clockwise quarter turns for each 8x8 block
 static const uint8_t module_rotation[4] PROGMEM = {1, 1, 1, 1};
 static const uint8_t module_mirror[4] PROGMEM = {0, 0, 0, 0};
 
-// Bit 0 is the left pixel of each sprite row.
-static const uint8_t car[CAR_HEIGHT] PROGMEM = {2, 7, 2, 7, 5};
+// Each HEX byte is one sprite row; bit 0 is the left pixel
+static const uint8_t car[CAR_HEIGHT] PROGMEM = {
+    0x02,
+    0x07,
+    0x02,
+    0x07,
+    0x05
+};
+
+// Startup logo: C, A, R stacked vertically, with a car below
+static const uint8_t logo[32] PROGMEM = {
+    // C
+    0x00, 0x00,
+    0x3C, 0x04, 0x04, 0x04, 0x3C,
+
+    // A
+    0x00, 0x00,
+    0x18, 0x24, 0x3C, 0x24, 0x24,
+
+    // R
+    0x00, 0x00,
+    0x1C, 0x24, 0x1C, 0x14, 0x24,
+
+    // Empty row and car
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x08, 0x1C, 0x08, 0x1C, 0x14,
+    0x00
+};
 
 static uint8_t framebuffer[32];
+static uint8_t started;
 static uint8_t player_x = 2;
 static uint8_t obstacle_x;
 static int8_t obstacle_y;
@@ -132,7 +159,7 @@ static void display_flush(void) {
 
 static void set_pixel(int8_t x, int8_t y) {
     if (x >= 0 && x < 8 && y >= 0 && y < 32) {
-        framebuffer[y] |= (uint8_t)(1U << x);
+        framebuffer[y] |= (uint8_t)(1 << x);
     }
 }
 
@@ -151,9 +178,13 @@ static void draw_car(uint8_t x, int8_t y) {
 }
 
 static void render(void) {
-    memset(framebuffer, 0, sizeof(framebuffer));
-    draw_car(player_x, PLAYER_Y);
-    draw_car(obstacle_x, obstacle_y);
+    if (!started) {
+        memcpy_P(framebuffer, logo, sizeof(framebuffer));
+    } else {
+        memset(framebuffer, 0, sizeof(framebuffer));
+        draw_car(player_x, PLAYER_Y);
+        draw_car(obstacle_x, obstacle_y);
+    }
     display_flush();
 }
 
@@ -181,6 +212,7 @@ static uint8_t collision(void) {
 }
 
 static void reset_game(uint32_t now) {
+    started = 1;
     player_x = 2;
     paused = 0;
     crashed = 0;
@@ -203,7 +235,7 @@ static void toggle_pause(uint32_t now) {
 }
 
 static void update_game(uint32_t now) {
-    if (paused || crashed || (uint32_t)(now - last_step) < STEP_MS) return;
+    if (!started || paused || crashed || (uint32_t)(now - last_step) < STEP_MS) return;
 
     last_step = now;
     obstacle_y++;
@@ -244,6 +276,10 @@ static uint8_t button_events(uint8_t pressed, uint32_t now) {
 }
 
 static void handle_input(uint8_t events, uint32_t now) {
+    if (!started) {
+        if (events) reset_game(now);
+        return; // Consume the start press, including the pause button.
+    }
     if (crashed) {
         if (events & (LEFT | RIGHT)) reset_game(now);
         return;
@@ -288,8 +324,7 @@ int main(void) {
     uint32_t last_poll = now;
     uint32_t last_frame = now - FRAME_MS; // Render on the first iteration.
 
-    reset_game(now); // Start immediately, without a menu.
-
+    // Keep the startup logo visible until any debounced button press.
     while (1) {
         now = millis();
 
