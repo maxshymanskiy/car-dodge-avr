@@ -3,7 +3,7 @@
 <item itemtype="Max72xx_matrix" CircId="Max72xx_matrix-1" mainComp="false" Show_id="true" Show_Val="false" Pos="-216,-188" rotation="270" hflip="1" vflip="-1" label="Max72xx_matrix" idLabPos="-33.8651,-38.1057" labelrot="90" valLabPos="-16,20" valLabRot="0" Color="Red" NumDisplays="4" />
 
 <item itemtype="Subcircuit" CircId="Uno-2" mainComp="false" Show_id="true" Show_Val="false" Pos="-328,36" rotation="360" hflip="-1" vflip="-1" label="Uno-2" idLabPos="0,-20" labelrot="0" valLabPos="-16,20" valLabRot="0" Logic_Symbol="false">
-<mainCompProps MainCompId="mega328-109" Frequency="16 MHz" Program="D:/Code/AVR/Car_dodge/.pio/build/uno/firmware.hex" Auto_Load="false" saveEepr="true" MainMcu="true" SerialMon="-1" />
+<mainCompProps MainCompId="mega328-109" Frequency="16 MHz" Program=".pio/build/uno/firmware.hex" Auto_Load="false" saveEepr="true" MainMcu="true" SerialMon="-1" />
 </item>
 
 <item itemtype="Push" CircId="Push-3" mainComp="false" Show_id="false" Show_Val="false" Pos="-268,104" rotation="0" hflip="1" vflip="1" label="Push-3" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Norm_Close="false" Poles="1" Key="&#x3C" />
