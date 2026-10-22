@@ -29,7 +29,7 @@ The crash animation is inspired by classic Brick Game racing, rather than an exa
 | 8 | 40 | 18 | 3 |
 | 9 | 35 | 18 | 3 |
 
-On an empty road, the next car appears at the edge opposite the player so spawning cannot stall. With traffic already present, new cars use random horizontal positions. Before accepting one, a small path search checks pixel collisions, movement repeat time and a reaction allowance against all active cars. If no safe route exists, spawning waits for another row step. A safe route exists when a car is spawned; a player can still choose a losing move.
+On an empty road, spawning first tries the edge opposite the player; this candidate is checked for safety too. With traffic already present, new cars use random horizontal positions. Before accepting one, a small path search checks pixel collisions, movement repeat time and a reaction allowance against all active cars. If no safe route exists, spawning waits for another row step. A safe route exists when a car is spawned; a player can still choose a losing move.
 
 ## Wiring
 
@@ -46,16 +46,41 @@ Each button connects its pin to GND; internal pull-ups are enabled. No 74HC165 i
 
 ## Code and settings
 
-Game code/settings are in `src/main.c`. Existing SPI and Timer0/millis libraries are reused unchanged. Updates, input and drawing are separate; game timing is nonblocking. Only the existing LOAD pulse uses microsecond delays.
+`src/main.c` only initializes modules and schedules input polling, game updates, and rendering. Existing SPI and Timer0/millis libraries are reused unchanged. Timing is nonblocking; only the display LOAD pulse uses microsecond delays.
 
-- `level_speed`, `level_gap`, `level_traffic`: the table above.
-- `CARS_PER_LEVEL = 10`, `LEVEL_COUNT = 10`: campaign length (extend tables before changing the level count).
-- `REPEAT_MS = 120`, `DEBOUNCE_MS = 25`, `REACTION_MS = 150`.
-- `CRASH_FRAME_MS = 80`, `CRASH_FRAMES = 12`: 0.96-second explosion sequence.
-- `BRIGHTNESS = 3`, range 0–15.
+| File | Responsibility |
+| --- | --- |
+| `include/game_config.h` | Difficulty, level intervals, input and animation timing; documented ranges |
+| `include/board_config.h` | Pins, brightness, module orientation and fixed display geometry |
+| `src/game.c` | Owns `game_t`; movement, state transitions, lives, progression and obstacle activation |
+| `src/spawn.c` | Read-only candidate placement and safe-route search |
+| `src/collision.c` | Shared pixel-accurate collision geometry |
+| `src/input.c` | Button hardware, debouncing and held/newly pressed button snapshots |
+| `src/renderer.c` | Framebuffer, status, menus and animations; reads game state |
+| `src/display.c` | MAX7219 initialization, physical mapping and SPI frame transfer |
+| `src/assets.c` | Flash-resident sprites and glyphs |
 
-The planner has six cooldown states, sized for these speed/repeat/reaction settings. Keep the rounded movement/reaction delays below six row steps when tuning them.
+### Tuning the game
+
+Edit `include/game_config.h`, then rebuild and upload. Defaults preserve the existing game.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `GAME_LEVELS(X)` | 100, 90, 80, 70, 60, 55, 50, 45, 40, 35 ms | One `X(interval)` per level; smaller intervals make obstacles faster |
+| `GAME_STARTING_LIVES` | 3 | Lives shared across the game; status supports 1..3 |
+| `GAME_CARS_PER_LEVEL` | 10 | More cars make each level longer |
+| `GAME_MAX_OBSTACLES` | 3 | Maximum simultaneous obstacles, including those entering the road |
+| `GAME_SPAWN_GAP_ROWS` | 18 | Smaller gaps permit denser traffic; safe-route search still applies |
+| `PLAYER_REPEAT_MS` | 120 | Smaller values move the player faster while holding a direction |
+| `SPAWN_REACTION_MS` | 150 | Larger allowances make spawning more conservative |
+| `INPUT_POLL_MS` / `INPUT_DEBOUNCE_MS` | 5 / 25 | Input sampling and contact debounce timing |
+| `CRASH_FRAME_MS` / `CRASH_FRAMES` | 80 / 12 | Explosion frame timing and duration |
+| `HP_BLINK_PERIOD_MS` / `HP_BLINK_OFF_MS` | 1000 / 100 | Life-dot blink timing |
+
+For a faster, denser game, try level intervals `80, 75, 70, 65, 60, 55, 50, 45, 40, 30` and a gap of `14`. For an easier game, increase the intervals and gap. The safety planner can delay spawns, so a smaller gap does not guarantee that every requested spawn occurs immediately.
+
+Level count is derived from `GAME_LEVELS(X)` (1..10 entries). Planner arrays are sized from the selected level's interval and movement/reaction delays, and should stay within 32 cooldown states to keep stack use small. Supported ranges are documented beside the settings and are not enforced by static assertions. Even empty-road candidates go through the safety check.
 
 Sprites use HEX row masks; bit 0 is the left logical pixel. The car is `{0x02, 0x07, 0x02, 0x07, 0x05}`. Bitmaps live in Flash (`PROGMEM`); the framebuffer uses 32 bytes of SRAM. Collision tests compare lit sprite pixels.
 
-The tested device mapping is preserved: `module_order = {3,2,1,0}`, `module_rotation = {1,1,1,1}`, `module_mirror = {0,0,0,0}`, `FLIP_SCREEN = 0`. Cars move toward increasing y; the player occupies rows 27–31. Text is mirrored like the existing logo to read correctly on this assembly. To check orientation, confirm CAR reads correctly, the level appears in the top block and the player is in the bottom block. Adjust only the mapping arrays if your module assembly differs.
+The tested device mapping is preserved: `module_order = {3,2,1,0}`, `module_rotation = {1,1,1,1}`, `module_mirror = {0,0,0,0}`, `FLIP_SCREEN = 1`. Cars move toward increasing y; the player occupies rows 27–31. Text is mirrored like the existing logo to read correctly on this assembly. To check orientation, confirm CAR reads correctly, the level appears in the top block and the player is in the bottom block. Adjust only the mapping arrays if your module assembly differs.
