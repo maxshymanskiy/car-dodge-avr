@@ -12,6 +12,9 @@ Every game starts at level 0. Pass ten cars to advance, and finish level 9 to wi
 
 The crash animation is inspired by classic Brick Game racing, rather than an exact recreation of one handheld model. Reference: [Brick Game remake](https://github.com/vitalibo/Brick-Game-9999-in-1).
 
+<img width="156" height="476" alt="image" src="https://github.com/user-attachments/assets/507a86ec-497c-4b7b-8ca7-828d8cff6ff7" />
+
+
 ## Difficulty
 
 **Speed only.** Movement intervals are milliseconds per falling pixel. Gap is the minimum number of row steps between spawns; the active-car limit includes cars entering above the visible road.
@@ -32,6 +35,8 @@ The crash animation is inspired by classic Brick Game racing, rather than an exa
 On an empty road, spawning first tries the edge opposite the player; this candidate is checked for safety too. With traffic already present, new cars use random horizontal positions. Before accepting one, a small path search checks pixel collisions, movement repeat time and a reaction allowance against all active cars. If no safe route exists, spawning waits for another row step. A safe route exists when a car is spawned; a player can still choose a losing move.
 
 ## Wiring
+<img width="681" height="646" alt="image" src="https://github.com/user-attachments/assets/bf889ab7-24c7-4976-b291-42868f3f73bf" />
+
 
 | Uno | Connection |
 | --- | --- |
