@@ -19,19 +19,21 @@
 #define REPEAT_MS 120UL
 #define FRAME_MS 20UL
 #define MENU_BLINK_MS 400UL
-#define CRASH_BLINK_MS 400UL
 #define CRASH_FRAME_MS 80UL
-#define CRASH_FRAMES 16
+#define CRASH_FRAMES 12
 #define BRIGHTNESS 3
 #define CAR_WIDTH 3
 #define CAR_HEIGHT 5
 #define MAX_OBSTACLES 3
 #define LEVEL_COUNT 10
 #define CARS_PER_LEVEL 10
-#define PLAYFIELD_TOP 8
+#define PLAYFIELD_TOP 7
+#define MAX_CAR_X (8 - CAR_WIDTH)
+#define CAR_POSITIONS (MAX_CAR_X + 1)
 #define SPAWN_Y (PLAYFIELD_TOP - CAR_HEIGHT)
 #define REACTION_MS 150UL
-#define PLAN_COOLDOWNS 3
+// Includes ceil(REACTION_MS / the fastest row interval), plus state zero.
+#define PLAN_COOLDOWNS 6
 #define PLAYER_Y 27         // Five rows: y=27..31, at the very bottom
 #define FLIP_SCREEN 0       // Keep sprite orientation unchanged
 
@@ -52,7 +54,7 @@ static const uint8_t car[CAR_HEIGHT] PROGMEM = {
 
 // Fixed traffic density: only speed changes between levels.
 static const uint8_t level_speed[LEVEL_COUNT] PROGMEM = {
-    150, 140, 130, 120, 110, 100, 90, 85, 80, 75
+    100, 90, 80, 70, 60, 55, 50, 45, 40, 35
 };
 static const uint8_t level_gap[LEVEL_COUNT] PROGMEM = {
     18, 18, 18, 18, 18, 18, 18, 18, 18, 18
@@ -80,11 +82,6 @@ static const uint8_t trophy[7] PROGMEM = {
     0x1F, 0x15, 0x15, 0x0E, 0x04, 0x04, 0x0E
 };
 
-// A 5x5 cross, shown after a collision.
-static const uint8_t crash_icon[5] PROGMEM = {
-    0x11, 0x0A, 0x04, 0x0A, 0x11
-};
-
 // Mirrored hollow 4x5 play symbol, centered in the fourth module.
 static const uint8_t play_icon[5] PROGMEM = {
     0x30, 0x28, 0x24, 0x28, 0x30
@@ -106,7 +103,9 @@ static const uint8_t logo[32] PROGMEM = {
 };
 
 static uint8_t framebuffer[32];
-typedef enum { MENU, PLAYING, PAUSED, CRASH_ANIMATION, GAME_OVER, VICTORY } game_state_t;
+
+typedef enum { MENU, PLAYING, PAUSED, CRASH_ANIMATION, VICTORY } game_state_t;
+
 typedef struct {
     uint8_t x;
     int8_t y;
@@ -252,14 +251,15 @@ static void draw_digit(uint8_t digit, uint8_t x) {
     for (uint8_t row = 0; row < 5; row++) {
         uint8_t bits = pgm_read_byte(&digits[digit][row]);
         for (uint8_t col = 0; col < 3; col++) {
-            if (bits & (1U << (2 - col))) set_pixel(7 - x - col, 1 + row);
+            if (bits & (1U << (2 - col))) set_pixel(7 - x - col, row);
         }
     }
 }
 
 static void draw_level(void) {
-    if (level < 10) draw_digit(level, 2);
-    else { draw_digit(1, 0); draw_digit(0, 4); }
+    draw_digit(level, 2);
+    // Row 5 separates the digit from the divider; row 7 starts the road.
+    framebuffer[PLAYFIELD_TOP - 1] = 0xFF;
 }
 
 static void draw_scene(uint8_t show_player) {
@@ -273,19 +273,16 @@ static void draw_scene(uint8_t show_player) {
 
 static void draw_crash(uint32_t now) {
     uint8_t frame = (uint32_t)(now - state_since) / CRASH_FRAME_MS;
-    if (frame < 6) {
-        draw_scene((frame % 2) == 0);
-    } else if (frame < 10) {
-        draw_scene(0);
+    draw_scene(0);
+    if (frame < 8 || (frame % 2) == 0) {
         draw_icon(explosion, 5, (int8_t)player_x - 1, PLAYER_Y);
         int8_t cx = player_x + 1, cy = PLAYER_Y + 2;
-        for (uint8_t r = 1; r <= frame - 5; r++) {
+        uint8_t radius = frame / 2 + 1;
+        if (radius > 4) radius = 4;
+        for (uint8_t r = 1; r <= radius; r++) {
             set_pixel(cx - r, cy - r); set_pixel(cx + r, cy - r);
             set_pixel(cx - r, cy + r); set_pixel(cx + r, cy + r);
         }
-    } else {
-        // Classic-style block fill, moving from the crash toward the top.
-        for (uint8_t y = 32 - (frame - 9) * 4; y < 32; y++) framebuffer[y] = 0xFF;
     }
 }
 
@@ -303,10 +300,6 @@ static void render(uint32_t now) {
         switch (state) {
             case PLAYING: case PAUSED: draw_scene(1); break;
             case CRASH_ANIMATION: draw_crash(now); break;
-            case GAME_OVER:
-                if (((uint32_t)(now - state_since) / CRASH_BLINK_MS) % 2 == 0)
-                    draw_icon(crash_icon, 5, 1, 18);
-                break;
             case VICTORY:
                 draw_icon(trophy, 7, 1, 15);
                 for (uint8_t y = 26; y < 32; y++) framebuffer[y] = (y % 2) ? 0xAA : 0x55;
@@ -319,20 +312,20 @@ static void render(uint32_t now) {
 
 /* ---------- Game logic ---------- */
 
-static uint8_t step_interval(void) { return pgm_read_byte(&level_speed[level - 1]); }
-static uint8_t spawn_gap(void) { return pgm_read_byte(&level_gap[level - 1]); }
-static uint8_t traffic_limit(void) { return pgm_read_byte(&level_traffic[level - 1]); }
+static uint8_t step_interval(void) { return pgm_read_byte(&level_speed[level]); }
+static uint8_t spawn_gap(void) { return pgm_read_byte(&level_gap[level]); }
+static uint8_t traffic_limit(void) { return pgm_read_byte(&level_traffic[level]); }
 
 static uint8_t random_position(void) {
     random_state ^= random_state << 7;
     random_state ^= random_state >> 9;
     random_state ^= random_state << 8;
-    return random_state % (8 - CAR_WIDTH + 1);
+    return random_state % CAR_POSITIONS;
 }
 
 static uint8_t blocked_positions(const int8_t y[MAX_OBSTACLES]) {
     uint8_t blocked = 0;
-    for (uint8_t x = 0; x <= 8 - CAR_WIDTH; x++) {
+    for (uint8_t x = 0; x <= MAX_CAR_X; x++) {
         for (uint8_t i = 0; i < MAX_OBSTACLES; i++) {
             if (obstacles[i].active && cars_overlap(x, obstacles[i].x, y[i])) {
                 blocked |= (1U << x);
@@ -350,7 +343,7 @@ static uint8_t collision(void) {
     return 0;
 }
 
-// Small reachability check: six horizontal positions and three cooldown states.
+// Reachability check over road positions and movement/reaction cooldown states.
 // It accounts for car pixels, held-button repeat time and a reaction allowance.
 // Candidate cars are rejected if no route survives until all known cars pass.
 static uint8_t safe_spawn(uint32_t now) {
@@ -375,7 +368,7 @@ static uint8_t safe_spawn(uint32_t now) {
             next[wait ? wait - 1 : 0] |= safe;
             if (!wait) {
                 uint8_t moves = ((safe << 1) | (safe >> 1)) &
-                    ((1U << (8 - CAR_WIDTH + 1)) - 1) & free_before;
+                    ((1U << CAR_POSITIONS) - 1) & free_before;
                 next[move_ticks - 1] |= moves;
             }
         }
@@ -407,9 +400,17 @@ static void try_spawn(uint32_t now) {
 
     obstacles[slot].active = 1;
     obstacles[slot].y = SPAWN_Y;
+    if (!active) {
+        // An empty road must never stall on a planner rejection. Put the car
+        // opposite the player, with enough horizontal separation to pass safely.
+        obstacles[slot].x = player_x <= MAX_CAR_X / 2 ? MAX_CAR_X : 0;
+        spawned++;
+        steps_since_spawn = 0;
+        return;
+    }
     uint8_t first = random_position();
-    for (uint8_t attempt = 0; attempt <= 8 - CAR_WIDTH; attempt++) {
-        obstacles[slot].x = (first + attempt) % (8 - CAR_WIDTH + 1);
+    for (uint8_t attempt = 0; attempt < CAR_POSITIONS; attempt++) {
+        obstacles[slot].x = (first + attempt) % CAR_POSITIONS;
         if (safe_spawn(now)) {
             spawned++;
             steps_since_spawn = 0;
@@ -422,6 +423,7 @@ static void try_spawn(uint32_t now) {
 
 static void begin_level(uint32_t now) {
     memset(obstacles, 0, sizeof(obstacles));
+    player_x = 2;
     spawned = passed = 0;
     steps_since_spawn = spawn_gap();
     last_step = last_move = now;
@@ -430,7 +432,7 @@ static void begin_level(uint32_t now) {
 }
 
 static void reset_game(uint32_t now) {
-    level = 1;
+    level = 0;
     player_x = 2;
     random_state ^= (uint16_t)now;
     if (!random_state) random_state = 0xACE1U;
@@ -457,8 +459,7 @@ static void toggle_pause(uint32_t now) {
 static void update_game(uint32_t now) {
     if (state == CRASH_ANIMATION) {
         if ((uint32_t)(now - state_since) >= CRASH_FRAME_MS * CRASH_FRAMES) {
-            state = GAME_OVER;
-            state_since = now;
+            begin_level(now);
         }
         return;
     }
@@ -476,7 +477,7 @@ static void update_game(uint32_t now) {
     }
     if (collision()) { start_crash(now); return; }
     if (passed == CARS_PER_LEVEL) {
-        if (level == LEVEL_COUNT) {
+        if (level == LEVEL_COUNT - 1) {
             state = VICTORY;
             state_since = now;
         } else {
@@ -519,7 +520,7 @@ static uint8_t button_events(uint8_t pressed, uint32_t now) {
 }
 
 static void handle_input(uint8_t events, uint32_t now) {
-    if (state == MENU || state == GAME_OVER || state == VICTORY) {
+    if (state == MENU || state == VICTORY) {
         if (events) reset_game(now);
         return;
     }
@@ -529,12 +530,14 @@ static void handle_input(uint8_t events, uint32_t now) {
 
     uint8_t direction = stable_buttons & (LEFT | RIGHT);
     if (direction != LEFT && direction != RIGHT) {
-        last_move = now;
         return;
     }
     if (!(events & (LEFT | RIGHT)) && (uint32_t)(now - last_move) < REPEAT_MS) return;
+    uint8_t previous_x = player_x;
     if (direction == LEFT && player_x > 0) player_x--;
-    if (direction == RIGHT && player_x < 8 - CAR_WIDTH) player_x++;
+    if (direction == RIGHT && player_x < MAX_CAR_X) player_x++;
+    // A blocked press at the edge is not a move and must not renew cooldown.
+    if (player_x == previous_x) return;
     last_move = now;
     if (collision()) start_crash(now);
 }
