@@ -80,7 +80,3 @@ Edit `include/game_config.h`, then rebuild and upload. Defaults preserve the exi
 For a faster, denser game, try level intervals `80, 75, 70, 65, 60, 55, 50, 45, 40, 30` and a gap of `14`. For an easier game, increase the intervals and gap. The safety planner can delay spawns, so a smaller gap does not guarantee that every requested spawn occurs immediately.
 
 Level count is derived from `GAME_LEVELS(X)` (1..10 entries). Planner arrays are sized from the selected level's interval and movement/reaction delays, and should stay within 32 cooldown states to keep stack use small. Supported ranges are documented beside the settings and are not enforced by static assertions. Even empty-road candidates go through the safety check.
-
-Sprites use HEX row masks; bit 0 is the left logical pixel. The car is `{0x02, 0x07, 0x02, 0x07, 0x05}`. Bitmaps live in Flash (`PROGMEM`); the framebuffer uses 32 bytes of SRAM. Collision tests compare lit sprite pixels.
-
-The tested device mapping is preserved: `module_order = {3,2,1,0}`, `module_rotation = {1,1,1,1}`, `module_mirror = {0,0,0,0}`, `FLIP_SCREEN = 1`. Cars move toward increasing y; the player occupies rows 27–31. Text is mirrored like the existing logo to read correctly on this assembly. To check orientation, confirm CAR reads correctly, the level appears in the top block and the player is in the bottom block. Adjust only the mapping arrays if your module assembly differs.
