@@ -1,12 +1,10 @@
 <circuit version="1.1.0-SR2" rev="260312" stepSize="1000000" stepsPS="1000000" NLsteps="100000" reaStep="1000000" animate="0" >
 
-<item itemtype="Max72xx_matrix" CircId="Max72xx_matrix-1" mainComp="false" Show_id="true" Show_Val="false" Pos="-216,-188" rotation="270" hflip="1" vflip="-1" label="Max72xx_matrix" idLabPos="-33.8651,-38.1057" labelrot="90" valLabPos="-16,20" valLabRot="0" Color="Red" NumDisplays="4" />
-
-<item itemtype="Subcircuit" CircId="Uno-2" mainComp="false" Show_id="true" Show_Val="false" Pos="-328,36" rotation="360" hflip="-1" vflip="-1" label="Uno-2" idLabPos="0,-20" labelrot="0" valLabPos="-16,20" valLabRot="0" Logic_Symbol="false">
-<mainCompProps MainCompId="mega328-109" Frequency="16 MHz" Program="D:/Code/AVR/Car_dodge/.pio/build/uno/firmware.hex" Auto_Load="false" saveEepr="true" MainMcu="true" SerialMon="-1" />
+<item itemtype="Subcircuit" CircId="Uno-2" mainComp="false" Show_id="true" Show_Val="false" Pos="-324,36" rotation="360" hflip="-1" vflip="-1" label="Uno-2" idLabPos="0,-20" labelrot="0" valLabPos="-16,20" valLabRot="0" Logic_Symbol="false">
+<mainCompProps MainCompId="mega328-109" Frequency="16 MHz" Program=".pio/build/uno/firmware.hex" Auto_Load="false" saveEepr="true" MainMcu="true" SerialMon="-1" />
 </item>
 
-<item itemtype="Push" CircId="Push-3" mainComp="false" Show_id="false" Show_Val="false" Pos="-268,104" rotation="0" hflip="1" vflip="1" label="Push-3" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Norm_Close="false" Poles="1" Key="&#x3C" />
+<item itemtype="Push" CircId="Push-3" mainComp="false" Show_id="false" Show_Val="false" Pos="-268,108" rotation="0" hflip="1" vflip="1" label="Push-3" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Norm_Close="false" Poles="1" Key="&#x3C" />
 
 <item itemtype="Push" CircId="Push-4" mainComp="false" Show_id="true" Show_Val="false" Pos="-156,80" rotation="0" hflip="1" vflip="1" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Norm_Close="false" Poles="1" Key="O" />
 
@@ -16,36 +14,38 @@
 
 <item itemtype="ResistorDip" CircId="ResistorDip-9" mainComp="false" ShowProp="Resistance" Show_id="false" Show_Val="true" Pos="-308,12" rotation="0" hflip="1" vflip="1" label="ResistorDip-9" idLabPos="-24,-40" labelrot="0" valLabPos="4,-26" valLabRot="90" Resistance="1000 Ω" Size="3" PullUp="false" PuVolt="5 V" />
 
+<item itemtype="Max72xx_matrix" CircId="Max72xx_matrix-20" mainComp="false" Show_id="true" Show_Val="false" Pos="-216,-164" rotation="90" hflip="1" vflip="1" label="Max72xx_matrix-20" idLabPos="-32,-58" labelrot="0" valLabPos="-16,20" valLabRot="0" Color="Yellow" NumDisplays="4" />
+
 <item itemtype="Node" CircId="Node-12" mainComp="false" Pos="-156,136" />
 
 <item itemtype="Node" CircId="Node-19" mainComp="false" Pos="-208,136" />
 
-<item itemtype="Connector" uid="Connector-13" startpinid="Uno-2-2" endpinid="ResistorDip-9-resistor2-ePin4" pointList="-336,4,-324,4" />
+<item itemtype="Connector" uid="Connector-13" startpinid="Uno-2-2" endpinid="ResistorDip-9-resistor2-ePin4" pointList="-332,4,-324,4" />
 
-<item itemtype="Connector" uid="Connector-14" startpinid="Uno-2-3" endpinid="ResistorDip-9-resistor1-ePin2" pointList="-336,-4,-324,-4" />
+<item itemtype="Connector" uid="Connector-14" startpinid="Uno-2-3" endpinid="ResistorDip-9-resistor1-ePin2" pointList="-332,-4,-324,-4" />
 
-<item itemtype="Connector" uid="Connector-15" startpinid="Uno-2-4" endpinid="ResistorDip-9-resistor0-ePin0" pointList="-336,-12,-324,-12" />
+<item itemtype="Connector" uid="Connector-15" startpinid="Uno-2-4" endpinid="ResistorDip-9-resistor0-ePin0" pointList="-332,-12,-324,-12" />
 
 <item itemtype="Connector" uid="Connector-34" startpinid="Node-12-2" endpinid="Ground-6-Gnd" pointList="-156,136,-156,144" />
 
 <item itemtype="Connector" uid="Connector-56" startpinid="Push-4-switch0pinN" endpinid="Node-12-0" pointList="-140,80,-140,136,-156,136" />
 
-<item itemtype="Connector" uid="Connector-66" startpinid="Push-3-switch0pinN" endpinid="Node-19-1" pointList="-252,104,-248,104,-248,136,-208,136" />
-
 <item itemtype="Connector" uid="Connector-67" startpinid="Push-5-switch0pinN" endpinid="Node-19-0" pointList="-208,104,-208,136" />
 
 <item itemtype="Connector" uid="Connector-68" startpinid="Node-19-2" endpinid="Node-12-1" pointList="-208,136,-156,136" />
 
-<item itemtype="Connector" uid="Connector-77" startpinid="Max72xx_matrix-1PinDin" endpinid="Uno-2-11" pointList="-164,-208,-148,-208,-148,-244,-276,-244,-276,-76,-336,-76" />
+<item itemtype="Connector" uid="Connector-96" startpinid="Max72xx_matrix-20PinCS" endpinid="Uno-2-10" pointList="-268,-176,-268,-68,-332,-68" />
 
-<item itemtype="Connector" uid="Connector-78" startpinid="Max72xx_matrix-1PinCS" endpinid="Uno-2-10" pointList="-164,-200,-140,-200,-140,-252,-268,-252,-268,-68,-336,-68" />
+<item itemtype="Connector" uid="Connector-103" startpinid="Max72xx_matrix-20PinSck" endpinid="Uno-2-13" pointList="-268,-192,-284,-192,-284,-92,-332,-92" />
 
-<item itemtype="Connector" uid="Connector-79" startpinid="Max72xx_matrix-1PinSck" endpinid="Uno-2-13" pointList="-164,-216,-156,-216,-156,-236,-284,-236,-284,-92,-336,-92" />
+<item itemtype="Connector" uid="Connector-104" startpinid="Max72xx_matrix-20PinDin" endpinid="Uno-2-11" pointList="-268,-184,-276,-184,-276,-76,-332,-76" />
 
-<item itemtype="Connector" uid="Connector-80" startpinid="ResistorDip-9-resistor2-ePin5" endpinid="Push-5-pinP0" pointList="-292,4,-292,88,-244,88,-244,104,-240,104" />
+<item itemtype="Connector" uid="Connector-105" startpinid="ResistorDip-9-resistor2-ePin5" endpinid="Push-3-pinP0" pointList="-292,4,-292,108,-284,108" />
 
 <item itemtype="Connector" uid="Connector-18" startpinid="ResistorDip-9-resistor0-ePin1" endpinid="Push-4-pinP0" pointList="-292,-12,-284,-12,-284,80,-172,80" />
 
-<item itemtype="Connector" uid="Connector-92" startpinid="ResistorDip-9-resistor1-ePin3" endpinid="Push-3-pinP0" pointList="-292,-4,-288,-4,-288,104,-284,104" />
+<item itemtype="Connector" uid="Connector-112" startpinid="ResistorDip-9-resistor1-ePin3" endpinid="Push-5-pinP0" pointList="-292,-4,-288,-4,-288,88,-244,88,-244,104,-240,104" />
+
+<item itemtype="Connector" uid="Connector-66" startpinid="Push-3-switch0pinN" endpinid="Node-19-1" pointList="-252,108,-248,108,-248,136,-208,136" />
 
 </circuit>
