@@ -307,16 +307,20 @@ static void render(uint32_t now) {
     if (state == MENU) {
         memcpy_P(framebuffer, logo, sizeof(framebuffer));
         draw_play_prompt(now);
+    } else if (state == VICTORY) {
+        // Full finish flags in modules 1 and 4; trophy across modules 2 and 3.
+        for (uint8_t row = 0; row < 8; row++) {
+            uint8_t pattern = (row % 2) ? 0xAA : 0x55;
+            framebuffer[row] = pattern;
+            framebuffer[24 + row] = pattern;
+        }
+        draw_icon(trophy, 7, 1, 12);
     } else {
         draw_status(now);
         switch (state) {
             case PLAYING: case PAUSED: draw_scene(1); break;
             case CRASH_ANIMATION: draw_crash(now); break;
             case GAME_OVER: draw_play_prompt(now); break;
-            case VICTORY:
-                draw_icon(trophy, 7, 1, 15);
-                for (uint8_t y = 26; y < 32; y++) framebuffer[y] = (y % 2) ? 0xAA : 0x55;
-                break;
             default: break;
         }
     }
@@ -541,7 +545,11 @@ static uint8_t button_events(uint8_t pressed, uint32_t now) {
 }
 
 static void handle_input(uint8_t events, uint32_t now) {
-    if (state == MENU || state == GAME_OVER || state == VICTORY) {
+    if (state == VICTORY) {
+        if (events & PAUSE) reset_game(now);
+        return;
+    }
+    if (state == MENU || state == GAME_OVER) {
         if (events) reset_game(now);
         return;
     }
