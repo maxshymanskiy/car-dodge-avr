@@ -19,6 +19,9 @@
 #define REPEAT_MS 120UL
 #define FRAME_MS 20UL
 #define MENU_BLINK_MS 400UL
+#define LIVES_PER_GAME 3
+#define HP_BLINK_PERIOD_MS 1000UL
+#define HP_BLINK_OFF_MS 100UL
 #define CRASH_FRAME_MS 80UL
 #define CRASH_FRAMES 12
 #define BRIGHTNESS 3
@@ -27,7 +30,7 @@
 #define MAX_OBSTACLES 3
 #define LEVEL_COUNT 10
 #define CARS_PER_LEVEL 10
-#define PLAYFIELD_TOP 7
+#define PLAYFIELD_TOP 8
 #define MAX_CAR_X (8 - CAR_WIDTH)
 #define CAR_POSITIONS (MAX_CAR_X + 1)
 #define SPAWN_Y (PLAYFIELD_TOP - CAR_HEIGHT)
@@ -104,7 +107,7 @@ static const uint8_t logo[32] PROGMEM = {
 
 static uint8_t framebuffer[32];
 
-typedef enum { MENU, PLAYING, PAUSED, CRASH_ANIMATION, VICTORY } game_state_t;
+typedef enum { MENU, PLAYING, PAUSED, CRASH_ANIMATION, GAME_OVER, VICTORY } game_state_t;
 
 typedef struct {
     uint8_t x;
@@ -116,6 +119,7 @@ static game_state_t state;
 static uint8_t player_x = 2;
 static obstacle_t obstacles[MAX_OBSTACLES];
 static uint8_t level, passed, spawned, steps_since_spawn;
+static uint8_t lives;
 static uint8_t stable_buttons;
 static uint16_t random_state = 0xACE1U;
 static uint32_t last_step;
@@ -251,15 +255,27 @@ static void draw_digit(uint8_t digit, uint8_t x) {
     for (uint8_t row = 0; row < 5; row++) {
         uint8_t bits = pgm_read_byte(&digits[digit][row]);
         for (uint8_t col = 0; col < 3; col++) {
-            if (bits & (1U << (2 - col))) set_pixel(7 - x - col, row);
+            if (bits & (1U << (2 - col))) set_pixel(7 - x - col, 1 + row);
         }
     }
 }
 
-static void draw_level(void) {
+static void draw_status(uint32_t now) {
     draw_digit(level, 2);
-    // Row 5 separates the digit from the divider; row 7 starts the road.
+    // Life dots sit beside the digit, briefly blinking off once per second.
+    if (now % HP_BLINK_PERIOD_MS < HP_BLINK_PERIOD_MS - HP_BLINK_OFF_MS) {
+        for (uint8_t i = 0; i < lives; i++) set_pixel(1, 1 + i * 2);
+    }
+    // Row 6 is blank; row 7 is the divider. Traffic starts in the next module.
     framebuffer[PLAYFIELD_TOP - 1] = 0xFF;
+}
+
+static void draw_play_prompt(uint32_t now) {
+    if ((now / MENU_BLINK_MS) % 2 == 0) {
+        for (uint8_t row = 0; row < sizeof(play_icon); row++) {
+            framebuffer[25 + row] |= pgm_read_byte(&play_icon[row]);
+        }
+    }
 }
 
 static void draw_scene(uint8_t show_player) {
@@ -290,16 +306,13 @@ static void render(uint32_t now) {
     memset(framebuffer, 0, sizeof(framebuffer));
     if (state == MENU) {
         memcpy_P(framebuffer, logo, sizeof(framebuffer));
-        if ((now / MENU_BLINK_MS) % 2 == 0) {
-            for (uint8_t row = 0; row < sizeof(play_icon); row++) {
-                framebuffer[25 + row] = pgm_read_byte(&play_icon[row]);
-            }
-        }
+        draw_play_prompt(now);
     } else {
-        draw_level();
+        draw_status(now);
         switch (state) {
             case PLAYING: case PAUSED: draw_scene(1); break;
             case CRASH_ANIMATION: draw_crash(now); break;
+            case GAME_OVER: draw_play_prompt(now); break;
             case VICTORY:
                 draw_icon(trophy, 7, 1, 15);
                 for (uint8_t y = 26; y < 32; y++) framebuffer[y] = (y % 2) ? 0xAA : 0x55;
@@ -433,6 +446,7 @@ static void begin_level(uint32_t now) {
 
 static void reset_game(uint32_t now) {
     level = 0;
+    lives = LIVES_PER_GAME;
     player_x = 2;
     random_state ^= (uint16_t)now;
     if (!random_state) random_state = 0xACE1U;
@@ -440,6 +454,9 @@ static void reset_game(uint32_t now) {
 }
 
 static void start_crash(uint32_t now) {
+    // One life per collision, even if several input/update checks detect it.
+    if (state != PLAYING) return;
+    if (lives) lives--;
     state = CRASH_ANIMATION;
     state_since = now;
 }
@@ -459,7 +476,11 @@ static void toggle_pause(uint32_t now) {
 static void update_game(uint32_t now) {
     if (state == CRASH_ANIMATION) {
         if ((uint32_t)(now - state_since) >= CRASH_FRAME_MS * CRASH_FRAMES) {
-            begin_level(now);
+            if (lives) begin_level(now);
+            else {
+                state = GAME_OVER;
+                state_since = now;
+            }
         }
         return;
     }
@@ -520,7 +541,7 @@ static uint8_t button_events(uint8_t pressed, uint32_t now) {
 }
 
 static void handle_input(uint8_t events, uint32_t now) {
-    if (state == MENU || state == VICTORY) {
+    if (state == MENU || state == GAME_OVER || state == VICTORY) {
         if (events) reset_game(now);
         return;
     }
