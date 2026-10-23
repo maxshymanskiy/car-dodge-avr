@@ -3,6 +3,7 @@
 
 // Edit these settings, then rebuild and upload the firmware.
 #define GAME_STARTING_LIVES 3		// 1..3 lives, shared across all levels.
+#define LIFE_RECOVERY_LEVELS 3		// 1..255 consecutive level completions without a crash restore one life.
 #define GAME_CARS_PER_LEVEL 10		// 1..255 cars to pass per level; more makes levels longer.
 #define GAME_MAX_OBSTACLES 3		// 1..8 simultaneous cars, including those entering the road; doesn't make sense if GAME_SPAWN_GAP_ROWS is to high.
 #define GAME_SPAWN_GAP_ROWS 18		// 1..255 row steps between spawns; lower allows denser traffic.

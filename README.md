@@ -18,6 +18,8 @@ Score is capped at 99: **8 per completed level + 1 per last-moment dodge + 2 per
 
 A last-moment dodge is a sideways move made when the next one-pixel obstacle descent would hit the old player position, but both the current and next obstacle positions are safe at the new position. Checks use lit sprite pixels. Early moves, stationary close passes and blocked moves give no bonus. Each obstacle can earn one bonus, paid only when it leaves the screen; a crash cancels all pending bonuses. Completed-level bonuses are awarded once, including the final level. Points already earned survive a level restart.
 
+Completing three levels in a row without a crash restores one life, up to the starting three lives. Each crash resets this streak; completing the restarted level counts as the first level of a new streak. Every third completion consumes the streak even at full health, so hearts cannot be saved for later. Recovery on the final level happens before the victory life bonus; restored hearts count normally.
+
 ## Difficulty
 
 **Speed only.** Movement intervals are milliseconds per falling pixel. Gap is the minimum number of row steps between spawns; the active-car limit includes cars entering above the visible road.
@@ -74,6 +76,7 @@ Edit `include/game_config.h`, then rebuild and upload. Defaults preserve the exi
 | --- | --- | --- |
 | `GAME_LEVELS(X)` | 100, 90, 80, 70, 60, 55, 50, 45, 40, 35 ms | One `X(interval)` per level; smaller intervals make obstacles faster |
 | `GAME_STARTING_LIVES` | 3 | Lives shared across the game; status supports 1..3 |
+| `LIFE_RECOVERY_LEVELS` | 3 | Consecutive level completions without a crash needed to restore one life; 1..255 |
 | `GAME_CARS_PER_LEVEL` | 10 | More cars make each level longer |
 | `GAME_MAX_OBSTACLES` | 3 | Maximum simultaneous obstacles, including those entering the road |
 | `GAME_SPAWN_GAP_ROWS` | 18 | Smaller gaps permit denser traffic; safe-route search still applies |

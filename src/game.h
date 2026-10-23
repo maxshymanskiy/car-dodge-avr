@@ -40,6 +40,7 @@ typedef struct {
     uint8_t spawned;
     uint8_t steps_since_spawn;
     uint8_t lives;
+    uint8_t damage_free_levels;
     uint8_t points;
     uint16_t random_state;
     uint32_t last_step;

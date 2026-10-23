@@ -12,6 +12,17 @@ static void add_points(game_t *game, uint16_t points) {
     game->points = total > SCORE_MAX ? SCORE_MAX : total;
 }
 
+static void recover_life(game_t *game) {
+    game->damage_free_levels++;
+    if (game->damage_free_levels >= LIFE_RECOVERY_LEVELS) {
+        if (game->lives < GAME_STARTING_LIVES) {
+            game->lives++;
+        }
+        // Full health consumes the streak too; extra hearts cannot be banked.
+        game->damage_free_levels = 0;
+    }
+}
+
 // Expand the config list into a Flash-resident table.
 #define LEVEL_INTERVAL(interval) interval,
 static const uint16_t level_step_ms[GAME_LEVEL_COUNT] PROGMEM = {
@@ -114,6 +125,7 @@ static void begin_level(game_t *game, uint32_t now) {
 static void reset_game(game_t *game, uint32_t now) {
     game->level = 0;
     game->lives = GAME_STARTING_LIVES;
+    game->damage_free_levels = 0;
     game->points = 0;
     game->random_state ^= (uint16_t)now;
     // Xorshift would stay at zero forever.
@@ -132,6 +144,7 @@ static void start_crash(game_t *game, uint32_t now) {
     if (game->lives > 0) {
         game->lives--;
     }
+    game->damage_free_levels = 0;
 
     game->state = CRASH_ANIMATION;
     game->crash_started_at = now;
@@ -192,6 +205,7 @@ static void update_game(game_t *game, uint32_t now) {
     // A crash cancels pending dodge bonuses, including cars passing this tick.
     add_points(game, (uint16_t)passed_dodges * SCORE_PER_DODGE);
     if (game->passed == GAME_CARS_PER_LEVEL) {
+        recover_life(game);
         add_points(game, SCORE_PER_LEVEL);
         if (game->level == GAME_LEVEL_COUNT - 1) {
             add_points(game, (uint16_t)game->lives * SCORE_PER_LIFE);
