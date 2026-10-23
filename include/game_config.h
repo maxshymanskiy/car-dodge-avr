@@ -7,6 +7,11 @@
 #define GAME_MAX_OBSTACLES 3		// 1..8 simultaneous cars, including those entering the road; doesn't make sense if GAME_SPAWN_GAP_ROWS is to high.
 #define GAME_SPAWN_GAP_ROWS 18		// 1..255 row steps between spawns; lower allows denser traffic.
 
+#define SCORE_MAX 99		        // 1..99 points; two-digit display limit.
+#define SCORE_PER_LEVEL 8		    // 0..99 points per completed level.
+#define SCORE_PER_DODGE 1		    // 0..99 points per last-moment dodge, after the car passes.
+#define SCORE_PER_LIFE 2		    // 0..99 points per remaining life; awarded only on victory.
+
 // 1..10 entries, in level order (0..9); X(value) is ms per falling pixel.
 // Use 1..65535 ms; lower is faster. Keep SPAWN_COOLDOWN_COUNT(value) <= 32.
 #define GAME_LEVELS(X) \
@@ -23,12 +28,12 @@
 
 #define INPUT_POLL_MS 5UL		    // 1..1000 ms between button reads; lower reduces input delay.
 #define INPUT_DEBOUNCE_MS 25UL		// 1..1000 ms a button state must stay stable.
-#define PLAYER_REPEAT_MS 120UL		// 1..1000 ms between moves while holding a direction.
+#define PLAYER_REPEAT_MS 80UL		// 1..1000 ms between moves while holding a direction.
 #define SPAWN_REACTION_MS 150UL		// 0..1000 ms reaction allowance; higher makes spawning safer.
 
 #define RENDER_FRAME_MS 20UL		// 1..1000 ms between screen updates; lower gives smoother animation.
 #define MENU_BLINK_MS 400UL		    // 1..10000 ms per on/off phase of the play prompt.
-#define HP_BLINK_PERIOD_MS 1000UL		// 1..10000 ms per full life-dot blink cycle.
+#define HP_BLINK_PERIOD_MS 1000UL	// 1..10000 ms per full life-dot blink cycle.
 #define HP_BLINK_OFF_MS 100UL		// 0..HP_BLINK_PERIOD_MS; time life dots stay off per cycle.
 #define CRASH_FRAME_MS 80UL		    // 1..1000 ms per explosion frame.
 #define CRASH_FRAMES 12		        // 1..255 frames; duration = CRASH_FRAMES * CRASH_FRAME_MS.

@@ -27,6 +27,7 @@ typedef struct {
     uint8_t x;
     int8_t y;
     uint8_t active;
+    uint8_t near_miss;
 } obstacle_t;
 
 // Owned by game.c. Other modules receive a read-only view.
@@ -39,6 +40,7 @@ typedef struct {
     uint8_t spawned;
     uint8_t steps_since_spawn;
     uint8_t lives;
+    uint8_t points;
     uint16_t random_state;
     uint32_t last_step;
     uint32_t last_move;

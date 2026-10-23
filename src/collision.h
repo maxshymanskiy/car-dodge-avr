@@ -6,4 +6,7 @@
 // Fixed player Y; compares lit pixels and ignores empty sprite corners.
 uint8_t player_overlaps_obstacle(uint8_t player_x, uint8_t obstacle_x, int8_t obstacle_y);
 
+// A safe sideways move that avoids a collision on the next falling pixel.
+uint8_t player_dodged_obstacle(uint8_t previous_x, uint8_t player_x, uint8_t obstacle_x, int8_t obstacle_y);
+
 #endif

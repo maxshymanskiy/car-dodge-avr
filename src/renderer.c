@@ -130,15 +130,16 @@ static void draw_crash(const game_t *game, uint32_t now) {
     }
 }
 
-static void draw_victory(void) {
-    // Full finish flags in modules 1 and 4; trophy across modules 2 and 3.
-    for (uint8_t row = 0; row < MODULE_SIZE; row++) {
-        uint8_t pattern = (row % 2) ? 0xAA : 0x55;
-        framebuffer[row] = pattern;
-        framebuffer[DISPLAY_HEIGHT - MODULE_SIZE + row] = pattern;
-    }
+static void draw_result(const game_t *game, uint32_t now) {
+    // Use the same physical text orientation as the level digit: 3 + 1 + 3 columns.
+    draw_digit(game->points / 10, 1);
+    draw_digit(game->points % 10, 5);
+    framebuffer[PLAYFIELD_TOP - 1] = 0xFF;
 
-    draw_icon(trophy, sizeof(trophy), TROPHY_X, TROPHY_Y);
+    if (game->state == VICTORY) {
+        draw_icon(trophy, sizeof(trophy), TROPHY_X, TROPHY_Y);
+    }
+    draw_play_prompt(now);
 }
 
 void renderer_draw(const game_t *game, uint32_t now) {
@@ -146,8 +147,8 @@ void renderer_draw(const game_t *game, uint32_t now) {
     if (game->state == MENU) {
         memcpy_P(framebuffer, logo, sizeof(framebuffer));
         draw_play_prompt(now);
-    } else if (game->state == VICTORY) {
-        draw_victory();
+    } else if (game->state == VICTORY || game->state == GAME_OVER) {
+        draw_result(game, now);
     } else {
         draw_status(game, now);
 
@@ -162,9 +163,6 @@ void renderer_draw(const game_t *game, uint32_t now) {
                 break;
 
             case GAME_OVER:
-                draw_play_prompt(now);
-                break;
-
             case MENU:
             case VICTORY:
                 break;

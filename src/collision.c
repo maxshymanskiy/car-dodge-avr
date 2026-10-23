@@ -12,3 +12,11 @@ uint8_t player_overlaps_obstacle(uint8_t x, uint8_t obstacle_x, int8_t obstacle_
     }
     return 0;
 }
+
+uint8_t player_dodged_obstacle(uint8_t previous_x, uint8_t player_x, uint8_t obstacle_x, int8_t obstacle_y) {
+    return previous_x != player_x &&
+        !player_overlaps_obstacle(previous_x, obstacle_x, obstacle_y) &&
+        player_overlaps_obstacle(previous_x, obstacle_x, obstacle_y + 1) &&
+        !player_overlaps_obstacle(player_x, obstacle_x, obstacle_y) &&
+        !player_overlaps_obstacle(player_x, obstacle_x, obstacle_y + 1);
+}

@@ -6,11 +6,17 @@ AVR C for Arduino Uno (ATmega328P, 16 MHz) and four cascaded MAX7219 matrices, m
 
 The startup CAR logo stays visible until any button is pressed. The first press only starts the game.
 
-The top 8×8 module shows the current level; the lower 8×24 is the road. Move the bottom car left/right, or hold a direction to repeat. D4 pauses/resumes. Cars use all eight display columns; there is no score display.
+The top 8×8 module shows the current level; the lower 8×24 is the road. Move the bottom car left/right, or hold a direction to repeat. D4 pauses/resumes. Cars use all eight display columns.
 
-Every game starts at level 0. Pass ten cars to advance, and finish level 9 to win. Levels cannot be selected. Each game starts with three lives, shared across all levels. Each collision costs exactly one life and plays the car explosion for 0.96 seconds. With lives remaining, the current level restarts automatically with its progress cleared and the player centered. After the third crash, a blinking play prompt waits for a fresh button press to start again at level 0 with three lives. Winning fills the top and bottom 8x8 modules with finish flags and centers the trophy across modules 2 and 3. Only a fresh press of the D4 stop/resume button starts a new game after victory.
+Every game starts at level 0. Pass ten cars to advance, and finish level 9 to win. Levels cannot be selected. Each game starts with three lives, shared across all levels. Each collision costs exactly one life and plays the car explosion for 0.96 seconds. With lives remaining, the current level restarts automatically with its progress cleared and the player centered; earned points are kept. After victory or the last crash, the top module shows the final score (00..99) and the bottom module shows a blinking retry arrow. Victory also centers the trophy across modules 2 and 3. A fresh press of D4 starts a new game with three lives and zero points.
 
 The crash animation is inspired by classic Brick Game racing, rather than an exact recreation of one handheld model. Reference: [Brick Game remake](https://github.com/vitalibo/Brick-Game-9999-in-1).
+
+## Points
+
+Score is capped at 99: **8 per completed level + 1 per last-moment dodge + 2 per remaining life on victory**. Winning with three lives gives 86 before dodge bonuses; reaching 99 requires at least 13 dodges.
+
+A last-moment dodge is a sideways move made when the next one-pixel obstacle descent would hit the old player position, but both the current and next obstacle positions are safe at the new position. Checks use lit sprite pixels. Early moves, stationary close passes and blocked moves give no bonus. Each obstacle can earn one bonus, paid only when it leaves the screen; a crash cancels all pending bonuses. Completed-level bonuses are awarded once, including the final level. Points already earned survive a level restart.
 
 ## Difficulty
 
@@ -52,9 +58,9 @@ Each button connects its pin to GND; internal pull-ups are enabled. No 74HC165 i
 | --- | --- |
 | `include/game_config.h` | Difficulty, level intervals, input and animation timing; documented ranges |
 | `include/board_config.h` | Pins, brightness, module orientation and fixed display geometry |
-| `src/game.c` | Owns `game_t`; movement, state transitions, lives, progression and obstacle activation |
+| `src/game.c` | Owns `game_t`; movement, state transitions, lives, points, progression and obstacle activation |
 | `src/spawn.c` | Read-only candidate placement and safe-route search |
-| `src/collision.c` | Shared pixel-accurate collision geometry |
+| `src/collision.c` | Shared pixel-accurate collision and last-moment dodge geometry |
 | `src/input.c` | Button hardware, debouncing and held/newly pressed button snapshots |
 | `src/renderer.c` | Framebuffer, status, menus and animations; reads game state |
 | `src/display.c` | MAX7219 initialization, physical mapping and SPI frame transfer |
@@ -71,6 +77,8 @@ Edit `include/game_config.h`, then rebuild and upload. Defaults preserve the exi
 | `GAME_CARS_PER_LEVEL` | 10 | More cars make each level longer |
 | `GAME_MAX_OBSTACLES` | 3 | Maximum simultaneous obstacles, including those entering the road |
 | `GAME_SPAWN_GAP_ROWS` | 18 | Smaller gaps permit denser traffic; safe-route search still applies |
+| `SCORE_MAX` | 99 | Score cap; keep within 1..99 for the two-digit display |
+| `SCORE_PER_LEVEL` / `SCORE_PER_DODGE` / `SCORE_PER_LIFE` | 8 / 1 / 2 | Completed level, successful last-moment dodge, and each remaining life on victory; 0..99 each |
 | `PLAYER_REPEAT_MS` | 120 | Smaller values move the player faster while holding a direction |
 | `SPAWN_REACTION_MS` | 150 | Larger allowances make spawning more conservative |
 | `INPUT_POLL_MS` / `INPUT_DEBOUNCE_MS` | 5 / 25 | Input sampling and contact debounce timing |

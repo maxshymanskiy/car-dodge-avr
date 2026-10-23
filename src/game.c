@@ -6,6 +6,12 @@
 
 static game_t game_data;
 
+static void add_points(game_t *game, uint16_t points) {
+    // Widen before adding so uint8_t cannot wrap before the cap.
+    uint16_t total = game->points + points;
+    game->points = total > SCORE_MAX ? SCORE_MAX : total;
+}
+
 // Expand the config list into a Flash-resident table.
 #define LEVEL_INTERVAL(interval) interval,
 static const uint16_t level_step_ms[GAME_LEVEL_COUNT] PROGMEM = {
@@ -54,6 +60,7 @@ static void activate_obstacle(game_t *game, uint8_t slot, uint8_t x) {
     game->obstacles[slot].x = x;
     game->obstacles[slot].y = SPAWN_Y;
     game->obstacles[slot].active = 1;
+    game->obstacles[slot].near_miss = 0;
     game->spawned++;
     game->steps_since_spawn = 0;
 }
@@ -107,6 +114,7 @@ static void begin_level(game_t *game, uint32_t now) {
 static void reset_game(game_t *game, uint32_t now) {
     game->level = 0;
     game->lives = GAME_STARTING_LIVES;
+    game->points = 0;
     game->random_state ^= (uint16_t)now;
     // Xorshift would stay at zero forever.
     if (!game->random_state) {
@@ -163,6 +171,7 @@ static void update_game(game_t *game, uint32_t now) {
         game->steps_since_spawn++;
     }
 
+    uint8_t passed_dodges = 0;
     for (uint8_t i = 0; i < GAME_MAX_OBSTACLES; i++) {
         if (!game->obstacles[i].active) {
             continue;
@@ -170,6 +179,7 @@ static void update_game(game_t *game, uint32_t now) {
 
         game->obstacles[i].y++;
         if (game->obstacles[i].y >= DISPLAY_HEIGHT) {
+            passed_dodges += game->obstacles[i].near_miss;
             game->obstacles[i].active = 0;
             game->passed++;
         }
@@ -179,8 +189,12 @@ static void update_game(game_t *game, uint32_t now) {
         return;
     }
 
+    // A crash cancels pending dodge bonuses, including cars passing this tick.
+    add_points(game, (uint16_t)passed_dodges * SCORE_PER_DODGE);
     if (game->passed == GAME_CARS_PER_LEVEL) {
+        add_points(game, SCORE_PER_LEVEL);
         if (game->level == GAME_LEVEL_COUNT - 1) {
+            add_points(game, (uint16_t)game->lives * SCORE_PER_LIFE);
             game->state = VICTORY;
         } else {
             game->level++;
@@ -220,19 +234,29 @@ static void move_player(game_t *game, uint8_t direction, uint8_t direction_was_p
 
     if (player_has_collided(game)) {
         start_crash(game, now);
+        return;
+    }
+
+    for (uint8_t i = 0; i < GAME_MAX_OBSTACLES; i++) {
+        obstacle_t *obstacle = &game->obstacles[i];
+        if (obstacle->active && !obstacle->near_miss &&
+            player_dodged_obstacle(previous_x, game->player_x, obstacle->x, obstacle->y)) {
+            // Commit only after this obstacle leaves the road without a crash.
+            obstacle->near_miss = 1;
+        }
     }
 }
 
 static void handle_input(game_t *game, input_state_t input, uint32_t now) {
     uint8_t events = input.pressed;
 
-    if (game->state == VICTORY) {
+    if (game->state == VICTORY || game->state == GAME_OVER) {
         if (events & PAUSE) {
             reset_game(game, now);
         }
         return;
     }
-    if (game->state == MENU || game->state == GAME_OVER) {
+    if (game->state == MENU) {
         if (events) {
             reset_game(game, now);
         }
