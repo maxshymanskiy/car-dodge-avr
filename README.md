@@ -12,7 +12,6 @@ Every game starts at level 0. Pass ten cars to advance, and finish level 9 to wi
 
 The crash animation is inspired by classic Brick Game racing, rather than an exact recreation of one handheld model. Reference: [Brick Game remake](https://github.com/vitalibo/Brick-Game-9999-in-1).
 
-<<<<<<< HEAD
 ## Points
 
 Score is capped at 99: **8 per completed level + 1 per last-moment dodge + 2 per remaining life on victory**. Winning with three lives gives 86 before dodge bonuses; reaching 99 requires at least 13 dodges.
@@ -20,10 +19,8 @@ Score is capped at 99: **8 per completed level + 1 per last-moment dodge + 2 per
 A last-moment dodge is a sideways move made when the next one-pixel obstacle descent would hit the old player position, but both the current and next obstacle positions are safe at the new position. Checks use lit sprite pixels. Early moves, stationary close passes and blocked moves give no bonus. Each obstacle can earn one bonus, paid only when it leaves the screen; a crash cancels all pending bonuses. Completed-level bonuses are awarded once, including the final level. Points already earned survive a level restart.
 
 Completing three levels in a row without a crash restores one life, up to the starting three lives. Each crash resets this streak; completing the restarted level counts as the first level of a new streak. Every third completion consumes the streak even at full health, so hearts cannot be saved for later. Recovery on the final level happens before the victory life bonus; restored hearts count normally.
-=======
 <img width="156" height="476" alt="image" src="https://github.com/user-attachments/assets/507a86ec-497c-4b7b-8ca7-828d8cff6ff7" />
 
->>>>>>> origin/main
 
 ## Difficulty
 
