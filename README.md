@@ -19,8 +19,10 @@ Score is capped at 99: **8 per completed level + 1 per last-moment dodge + 2 per
 A last-moment dodge is a sideways move made when the next one-pixel obstacle descent would hit the old player position, but both the current and next obstacle positions are safe at the new position. Checks use lit sprite pixels. Early moves, stationary close passes and blocked moves give no bonus. Each obstacle can earn one bonus, paid only when it leaves the screen; a crash cancels all pending bonuses. Completed-level bonuses are awarded once, including the final level. Points already earned survive a level restart.
 
 Completing three levels in a row without a crash restores one life, up to the starting three lives. Each crash resets this streak; completing the restarted level counts as the first level of a new streak. Every third completion consumes the streak even at full health, so hearts cannot be saved for later. Recovery on the final level happens before the victory life bonus; restored hearts count normally.
-<img width="156" height="476" alt="image" src="https://github.com/user-attachments/assets/507a86ec-497c-4b7b-8ca7-828d8cff6ff7" />
 
+<div align="center">
+  <img width="156" height="476" alt="image" src="https://github.com/user-attachments/assets/507a86ec-497c-4b7b-8ca7-828d8cff6ff7" />
+</div>
 
 ## Difficulty
 
@@ -42,8 +44,10 @@ Completing three levels in a row without a crash restores one life, up to the st
 On an empty road, spawning first tries the edge opposite the player; this candidate is checked for safety too. With traffic already present, new cars use random horizontal positions. Before accepting one, a small path search checks pixel collisions, movement repeat time and a reaction allowance against all active cars. If no safe route exists, spawning waits for another row step. A safe route exists when a car is spawned; a player can still choose a losing move.
 
 ## Wiring
-<img width="681" height="646" alt="image" src="https://github.com/user-attachments/assets/bf889ab7-24c7-4976-b291-42868f3f73bf" />
 
+<div align="center">
+  <img width="681" height="646" alt="image" src="https://github.com/user-attachments/assets/bf889ab7-24c7-4976-b291-42868f3f73bf" />
+</div>
 
 | Uno | Connection |
 | --- | --- |
